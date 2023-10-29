@@ -15,8 +15,9 @@ var upgrader = websocket.Upgrader{
 }
 
 type Packet struct {
-	Type uint8
-	Data interface{}
+	Type  uint8
+	Data  interface{}
+	Error error
 }
 
 type PacketHandler func(*Packet, *websocket.Conn)
@@ -40,7 +41,7 @@ func DeserializePacket(data []byte) *Packet {
 	}
 
 	if handler, exists := Packets[packetType]; exists {
-		packet.Data = handler.Deserialize(packetData)
+		packet.Data, packet.Error = handler.Deserialize(packetData)
 	} else {
 		fmt.Printf("Received unknown packet type %d", packetType)
 	}

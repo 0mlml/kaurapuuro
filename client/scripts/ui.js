@@ -34,27 +34,52 @@ const globalKeybindings = new Map();
 /**
  * @description Registers a keybinding
  * @param {string} keyCombo The key combination to bind to
- * @param {Function} func The function to call when the key combination is pressed
+ * @param {(event: KeyboardEvent) => void} func The function to call when the key combination is pressed
  */
 const registerKeybinding = (keyCombo, func) => {
-  // Normalize the key combo
   keyCombo = keyCombo.split('+').sort().join('+').toLowerCase();
 
-  globalKeybindings.set(keyCombo, func);
+  if (!globalKeybindings.has(keyCombo)) globalKeybindings.set(keyCombo, []);
+
+  globalKeybindings.get(keyCombo).push(func);
 };
 
-/** Key down handler, updates the global keyboard state */
+/* Key down handler, updates the global keyboard state */
 document.addEventListener('keydown', (event) => {
   globalKeyboardState.set(event.key.toLowerCase(), true);
 
   const keyCombo = [...globalKeyboardState.keys()].sort().join('+');
-  const func = globalKeybindings.get(keyCombo);
-  if (func) func();
+  const funcs = globalKeybindings.get(keyCombo);
+  if (funcs?.length) funcs.forEach(f => f(event));
 });
 
-/** Key up handler, updates the global keyboard state */
+/**
+ * @description Deregisters a keybinding
+ * @param {string} keyCombo The key combination to deregister
+ * @param {Function} func The function to deregister
+ */
+const deregisterKeybinding = (keyCombo, func) => {
+  keyCombo = keyCombo.split('+').sort().join('+').toLowerCase();
+
+  if (!globalKeybindings.has(keyCombo)) return;
+
+  const funcs = globalKeybindings.get(keyCombo);
+  if (funcs.length === 1) globalKeybindings.delete(keyCombo);
+  else {
+    const index = funcs.indexOf(func);
+    if (index === -1) return;
+    funcs.splice(index, 1);
+  }
+}
+
+/* Key up handler, updates the global keyboard state */
 document.addEventListener('keyup', (event) => {
   globalKeyboardState.delete(event.key.toLowerCase());
+});
+
+/* On focus losss, clear the keyboard state */
+window.addEventListener('blur', () => {
+  globalKeyboardState.clear();
 });
 
 /**
@@ -92,9 +117,16 @@ const generateModalWindow = ({
   const titleElem = createElem('div', 'modal-window-header-title', '', header);
   const buttons = createElem('div', 'modal-window-header-buttons', '', header);
 
+  const bringToFront = () => {
+    modal.remove();
+    document.body.appendChild(modal);
+  }
+  modal.addEventListener('click', bringToFront);
+
   let x1 = 0, y1 = 0, x2 = 0, y2 = 0, dragging = false;
   header.addEventListener('mousedown', e => {
     [x2, y2, dragging] = [e.clientX, e.clientY, true];
+    bringToFront();
   });
   document.addEventListener('mouseup', e => {
     dragging = e.button !== 0 ? dragging : false;
@@ -110,7 +142,10 @@ const generateModalWindow = ({
 
   titleElem.innerText = title;
   createElem('div', 'modal-window-header-button ghost-button', 'Toggle window shimmer', buttons).addEventListener('click', () => modal.classList.toggle('ghosted'));
-  createElem('div', 'modal-window-header-button close-button', 'Close window', buttons).addEventListener('click', () => modal.remove());
+  createElem('div', 'modal-window-header-button close-button', 'Close window', buttons).addEventListener('click', e => {
+    e.stopPropagation();
+    modal.remove()
+  });
   createElem('div', 'modal-window-content', '', modal).innerHTML = content;
 
   Object.assign(modal.style, { width: `${width}px`, height: `${height}px` });

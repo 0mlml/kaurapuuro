@@ -8,7 +8,7 @@ const state = {
   socket: null,
   serverinfo: {
   },
-  lastHeartBeat: 0,
+  autoConnectInterval: null,
 }
 
 const Packets = {
@@ -17,36 +17,56 @@ const Packets = {
     deserialize: _ => null,
     serialize: _ => null,
   },
-  /* DrawNewPointPacket: debug packet for netcode development */
-  81: {
-    /**
-     * @param {ArrayBufferLike} buffer 
-     * @returns {{x: number, y: number, color: number}}
-     */
-    deserialize: (buffer) => {
-      const view = new DataView(buffer);
-      const x = view.getUint16(0);
-      const y = view.getUint16(2);
-      const color = view.getUint8(4);
-      return {
-        x,
-        y,
-        color,
-      };
-    },
-    /**
-     * @param {{x: number, y: number, color: number}} data 
-     * @returns {ArrayBufferLike}
-     */
+  /* UserCommandPacket: sent by client to server to update user commands */
+  1: {
+    deserialize: _ => null,
     serialize: (data) => {
       const buffer = new ArrayBuffer(5);
       const view = new DataView(buffer);
-      view.setUint16(0, data.x);
-      view.setUint16(2, data.y);
-      view.setUint8(4, data.color);
+      view.setUint16(0, data.entityID);
+      view.setUint8(2, data.commands);
+      view.setUint16(3, data.barrelYaw);
       return buffer;
     }
-  }
+  },
+  /* UserCommandsPacket: sent by server to client to update player keys */
+  2: {
+    deserialize: (data) => {
+      const view = new DataView(data);
+      const numCommands = view.getUint8(0);
+      const commands = [];
+      for (let i = 0; i < numCommands; i++) {
+        const entityID = view.getUint16(1 + i * 5);
+        const commandField = view.getUint8(3 + i * 5);
+        const barrelYaw = view.getUint16(4 + i * 5);
+        commands.push({
+          entityID: entityID,
+          commands: {
+            forward: commandField & 1 != 0,
+            backward: commandField & 2 != 0,
+            left: commandField & 4 != 0,
+            right: commandField & 8 != 0,
+            fire: commandField & 16 != 0,
+            altfire: commandField & 32 != 0,
+          },
+          barrelYaw: (barrelYaw / 10) * (Math.PI / 180),
+        });
+      }
+      console.debug('Received UserCommandsPacket', commands)
+      return commands;
+    },
+    serialize: _ => null,
+  },
+  /* MapDataPacket: sent by server to client to update map data */
+  3: {
+    deserialize: (data) => {
+      const view = new DataView(data);
+      const mapData = JSON.stringify(view);
+      console.debug('Received MapDataPacket', mapData);
+      return mapData;
+    },
+    serialize: _ => null,
+  },
 }
 
 /**
@@ -111,13 +131,15 @@ const deregisterPacketListener = (packetName, func) => {
  * @param {{type: number, data: any}} packet
  */
 const sendPacket = (packet) => {
+  if (config.offlineMode.value) return;
+
   if (!state.socket) {
     console.warn('Attempted to send packet without a connection');
     return;
   }
 
   const serializer = Packets[packet.type]?.serialize;
-  
+
   if (!serializer) {
     console.error(`Attempted to send unknown packet type ${packet.type}`, packet);
     return;
@@ -128,7 +150,7 @@ const sendPacket = (packet) => {
   packetBuffer[0] = packet.type;
 
   packetBuffer.set(new Uint8Array(payload), 1);
-  
+
   state.socket.send(packetBuffer);
 }
 
@@ -141,6 +163,8 @@ const sendPacket = (packet) => {
  */
 const openConnection = (url, force = false) => {
   return new Promise((resolve, reject) => {
+    if (config.offlineMode.value) reject('Offline mode is enabled');
+
     if (state.socket && !force) {
       reject('Socket already exists');
       return;
@@ -175,6 +199,7 @@ const openConnection = (url, force = false) => {
 
     state.socket.addEventListener('close', () => {
       console.debug('Connection closed');
+      state.socket = null;
     });
   });
 }

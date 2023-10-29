@@ -1,35 +1,64 @@
-/** @type {HTMLCanvasElement} */
-const foregroundCanvas = document.getElementById('fg-canvas');
-const foregroundCtx = foregroundCanvas.getContext('2d');
+/**
+ * @fileoverview This file contains the game engine. 
+ * It is meant to match the server's engine as closely as possible.
+ * Rendering should be handled in render.js.
+ */
 
-foregroundCanvas.width = window.innerWidth;
-foregroundCanvas.height = window.innerHeight;
+const tickrate = 30;
+const delta = 30 / 1;
 
-/** @type {HTMLCanvasElement} */
-const backgroundCanvas = document.getElementById('bg-canvas');
-const backgroundCtx = backgroundCanvas.getContext('2d');
+const Map = {
+  lines: [],
+  spawnpoints: [],
+}
 
-backgroundCanvas.width = window.innerWidth;
-backgroundCanvas.height = window.innerHeight;
+const Entities = {
+  players: [],
+  projectiles: [],
+  explosions: [],
+}
 
-registerNewPacketListener(81, (data) => { // DrawNewPointPacket
-  const { x, y, color } = data;
-  foregroundCtx.fillStyle = `rgb(${color}, ${color}, ${color})`;
+let waitingForMap = true;
+registerNewPacketListener(3, (data) => {
+  if (!waitingForMap) {
+    console.warn('Received MapDataPacket while not waiting for map data', data);
+    return;
+  }
 
-  foregroundCtx.beginPath();
-  foregroundCtx.ellipse(x, y, 5, 5, 0, 0, 2 * Math.PI);
-  foregroundCtx.fill();
+  setMap(data);
+  waitingForMap = false;
 });
 
-registerKeybinding('p', () => {
-  const packet = {
-    type: 81,
-    data: {
-      x: globalMouseX,
-      y: globalMouseY,
-      color: Math.floor(Math.random() * 0xFF),
-    }
-  };
+const setMap = (map) => {
+  Map.lines = map.lines;
+  Map.spawnpoints = map.spawnpoints;
+}
 
-  sendPacket(packet);
-});
+const Vector = (x, y) => {
+  this.x = x;
+  this.y = y;
+}
+
+const Line = (start, end) => {
+  this.start = start;
+  this.end = end;
+}
+
+const Box = (pos, width, height) => {
+  this.pos = pos;
+  this.width = width;
+  this.height = height;
+}
+
+/**
+ * @description Usercommand object.
+ * @param {number} EID 0-255 Entity ID 
+ * @param {{left: boolean, right: boolean, forward: boolean, backward: boolean, fire: boolean, altfire: boolean}} commands Move flags
+ * @param {number} barrelYaw Radians 
+ */
+const UserCommand = (EID, commands, barrelYaw) => {
+  this.EID = EID;
+  this.commands = commands;
+  this.barrelYaw = barrelYaw;
+}
+

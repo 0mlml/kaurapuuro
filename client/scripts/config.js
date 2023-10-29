@@ -8,25 +8,8 @@ const config = {
     type: 'checkbox',
     display: 'Offline mode',
     helptext: 'When checked, the client will make no attempts to connect to a server',
-    value: true
-  },
-  dropdownExample: {
-    key: 'dropdownExample',
-    type: 'dropdown',
-    display: 'Just an example dropdown',
-    helptext: 'foo',
-    value: 'a',
-    options: ['a', 'b', 'c', 'd'],
-  },
-  numberExample: {
-    key: 'numberExample',
-    type: 'number',
-    display: 'Just an example number',
-    helptext: 'bar',
-    value: 1000,
-    min: 0,
-    max: 20000,
-    step: 100,
+    value: false,
+    callback: () => state?.socket?.close ? state.socket.close() : null,
   },
   serverURL: {
     key: 'serverURL',
@@ -43,6 +26,28 @@ const config = {
       });
     },
   },
+  autoConnectInterval: {
+    key: 'autoConnectInterval',
+    type: 'number',
+    display: 'Auto-connect interval',
+    helptext: 'The interval in milliseconds between attempts to connect to the server',
+    value: 1000,
+    min: 500,
+    max: 60000,
+    step: 100,
+    showOnlyIf: () => !config.offlineMode.value,
+    callback: () => {
+      clearInterval(state.autoConnectInterval);
+      state.autoConnectInterval = setInterval(() => {
+        if (state.socket) return;
+        openConnection(config.serverURL.value, true).then(_ => {
+          console.info('Successfully connected to server');
+        }).catch(err => {
+          console.error('Failed to connect to server', err);
+        });
+      }, config.autoConnectInterval.value);
+    }
+  },
   nickname: {
     key: 'nickname',
     type: 'text',
@@ -58,11 +63,6 @@ const config = {
     value: 'light',
     options: ['dark', 'light'],
     callback: () => document.body.setAttribute('data-theme', config.theme.value),
-  },
-  hiddenExample: {
-    key: 'hiddenExample',
-    type: 'hidden',
-    value: 'Sneaky way to persist data using the existing system',
   },
 }
 
