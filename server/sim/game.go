@@ -46,6 +46,6 @@ func getLineIntersection(line1, line2 Line) (vec Vector, ok bool) {
 	}, true
 }
 
-func (g *Game) tick() {
+func (g *Game) Tick() {
 
 }

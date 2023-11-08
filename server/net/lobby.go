@@ -79,12 +79,32 @@ func GenerateLobbyPacketListener(p *Packet, c *websocket.Conn) {
 		log.Printf("Error deserializing packet: %s", p.Error)
 	}
 
+	resultPacket := &GenerateNewLobbyResultPacket{}
+
+	client := GetClientByConn(c)
+
+	if client == nil {
+		log.Printf("Received packet from unknown client")
+		return
+	}
+
+	if ok, lobby := ClientExistsInLobby(client); ok {
+		log.Printf("Client %s is already in a lobby when creating new lobby. Dropping them from lobby %s", client.UUID, lobby.UUID)
+		lobby.RemoveClient(client)
+	}
+
 	packet := p.Data.(*GenerateNewLobbyPacket)
 
 	if packet.Name == "" {
 		log.Printf("Received empty lobby name")
+		client.SendPacket(5, resultPacket.Serialize())
 		return
 	}
 
 	lobby := NewLobby(packet.Name)
+
+	log.Printf("Generated new lobby with UUID: %s", lobby.UUID)
+
+	resultPacket.UUID = lobby.UUID
+	client.SendPacket(5, resultPacket.Serialize())
 }

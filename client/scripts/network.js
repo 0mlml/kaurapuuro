@@ -33,12 +33,18 @@ const Packets = {
   2: {
     deserialize: (data) => {
       const view = new DataView(data);
+      let offset = 0;
       const numCommands = view.getUint8(0);
+      offset += 1;
+
       const commands = [];
       for (let i = 0; i < numCommands; i++) {
-        const entityID = view.getUint16(1 + i * 5);
-        const commandField = view.getUint8(3 + i * 5);
-        const barrelYaw = view.getUint16(4 + i * 5);
+        const entityID = view.getUint16(offset);
+        offset += 2;
+        const commandField = view.getUint8(offset);
+        offset += 1;
+        const barrelYaw = view.getUint16(offset);
+        offset += 2;
         commands.push({
           entityID: entityID,
           commands: {
@@ -64,6 +70,84 @@ const Packets = {
       const mapData = JSON.stringify(view);
       console.debug('Received MapDataPacket', mapData);
       return mapData;
+    },
+    serialize: _ => null,
+  },
+  /* GenerateNewLobbyPacket: sent by client to server to request a new lobby */
+  4: {
+    deserialize: _ => null,
+    serialize: (data) => {
+      const name = data.name;
+      const buffer = new ArrayBuffer(name.length);
+      const view = new DataView(buffer);
+      for (let i = 0; i < name.length; i++) {
+        view.setUint8(i, name.charCodeAt(i));
+      }
+      return buffer;
+    },
+  },
+  /* GenerateNewLobbyResultPacket: sent by server to client to inform of the result */
+  5: {
+    deserialize: (data) => {
+      const view = new DataView(data);
+      let uuid = "";
+      for (let i = 0; i < view.byteLength; i++) {
+        uuid += String.fromCharCode(view.getUint8(i));
+      }
+      console.debug('Received GenerateNewLobbyResultPacket', uuid);
+      return uuid;
+    },
+    serialize: _ => null,
+  },
+  /* EntityListPacket: sent by server to client to update authoritative entity list, and by proxy the state of those entities */
+  6: {
+    deserialize: (data) => {
+      const view = new DataView(data);
+      const entities = [];
+      let offset = 0;
+      const numTanks = view.getUint8(offset);
+      offset += 1;
+
+      for (let i = 0; i < numTanks; i++) {
+        const entityID = view.getUint16(offset);
+        offset += 2;
+        const x = view.getFloat64(offset);
+        offset += 8;
+        const y = view.getFloat64(offset);
+        offset += 8;
+        const v_x = view.getFloat64(offset);
+        offset += 8;
+        const v_y = view.getFloat64(offset);
+        offset += 8;
+        const e_flags = view.getUint8(offset);
+        offset += 1;
+        const barrelYaw = view.getUint16(offset) / 10 * (Math.PI / 180);
+        offset += 2;
+        const t_flags = view.getUint8(offset);
+        offset += 1;
+
+        // Decode t_flags for type and team
+        const types = ['common', 'fast', 'rocket', 'bounce', 'ph_five', 'ph_six', 'ph_seven', 'ph_eight'];
+        const type = types[t_flags & 0x07];
+        const team = (t_flags >> 4) + 1;
+
+        entities.push({
+          entityID: entityID,
+          x: x,
+          y: y,
+          v_x: v_x,
+          v_y: v_y,
+          barrelYaw: barrelYaw,
+          flags: {
+            /* Entity flags */
+            isAlive: e_flags & 1 != 0,
+            isInvincible: e_flags & 2 != 0,
+          },
+          type: type,
+        });
+      }
+      console.debug('Received EntityListPacket', entities);
+      return entities;
     },
     serialize: _ => null,
   },

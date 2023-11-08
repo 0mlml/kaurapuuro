@@ -68,6 +68,7 @@ const renderPreviewSpawnpoint = (spawnpoint) => {
 let looping = true;
 let fps = 30;
 let lastFrameTime = performance.now();
+let background
 
 const renderLoop = () => {
   const now = performance.now();

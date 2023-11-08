@@ -203,3 +203,33 @@ func (m *Map) ParseMapFromJson(jsonMap string) {
 		m.SpawnPoints = append(m.SpawnPoints, spawnPoint.ToSpawnPoint())
 	}
 }
+
+func (m *Map) StringifyToJson() (jsonMap string, err error) {
+	formatMap := MapFormat{}
+
+	for _, line := range m.Lines {
+		formatMap.Lines = append(formatMap.Lines, MapFormatLine{
+			X1:    "w*" + strconv.FormatFloat(line.Start.X/WIDTH, 'f', -1, 64),
+			Y1:    "h*" + strconv.FormatFloat(line.Start.Y/HEIGHT, 'f', -1, 64),
+			X2:    "w*" + strconv.FormatFloat(line.End.X/WIDTH, 'f', -1, 64),
+			Y2:    "h*" + strconv.FormatFloat(line.End.Y/HEIGHT, 'f', -1, 64),
+			Color: "#000000",
+		})
+	}
+
+	for _, spawnPoint := range m.SpawnPoints {
+		formatMap.SpawnPoints = append(formatMap.SpawnPoints, MapFormatSpawnPoint{
+			X:     "w*" + strconv.FormatFloat(spawnPoint.Position.X/WIDTH, 'f', -1, 64),
+			Y:     "h*" + strconv.FormatFloat(spawnPoint.Position.Y/HEIGHT, 'f', -1, 64),
+			ID:    spawnPoint.ID,
+			Flags: spawnPoint.Flags,
+		})
+	}
+
+	jsonMapBytes, err := json.Marshal(formatMap)
+	if err != nil {
+		return "", err
+	}
+
+	return string(jsonMapBytes), nil
+}

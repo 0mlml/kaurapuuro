@@ -49,7 +49,7 @@ func (p *MapDataPacket) Deserialize(data []byte) (interface{}, error) {
 
 // Client to server exclusively
 type UserCommandPacket struct {
-	UserCommand sim.UserCommand
+	UserCommand sim.NetUserCommand
 }
 
 func (p *UserCommandPacket) Serialize() []byte {
@@ -77,7 +77,7 @@ func (p *UserCommandPacket) Deserialize(data []byte) (interface{}, error) {
 // Server to client exclusively
 type UserCommandsPacket struct {
 	CommandsCount uint8
-	UserCommands  []sim.UserCommand
+	UserCommands  []sim.NetUserCommand
 }
 
 func (p *UserCommandsPacket) Serialize() []byte {
@@ -116,9 +116,64 @@ func (p *GenerateNewLobbyPacket) Deserialize(data []byte) (interface{}, error) {
 
 // Server to client
 type GenerateNewLobbyResultPacket struct {
-	UUID string
+	UUID string // UUID of the lobby, empty if failed
 }
 
+func (p *GenerateNewLobbyResultPacket) Serialize() []byte {
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.BigEndian, p.UUID)
+	return buf.Bytes()
+}
+
+func (p *GenerateNewLobbyResultPacket) Deserialize(data []byte) (interface{}, error) {
+	return nil, nil
+}
+
+// Server to client
 type EntityListPacket struct {
-	Entities []sim.Entity
+	Entities sim.NetEntityList
+}
+
+func (p *EntityListPacket) Serialize() []byte {
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.BigEndian, p.Entities.TankCount)
+	for _, tank := range p.Entities.Tanks {
+		binary.Write(buf, binary.BigEndian, tank.EID)
+		binary.Write(buf, binary.BigEndian, tank.Position.X)
+		binary.Write(buf, binary.BigEndian, tank.Position.Y)
+		binary.Write(buf, binary.BigEndian, tank.Velocity.X)
+		binary.Write(buf, binary.BigEndian, tank.Velocity.Y)
+		binary.Write(buf, binary.BigEndian, tank.EFlags)
+		binary.Write(buf, binary.BigEndian, tank.BarrelYaw)
+		binary.Write(buf, binary.BigEndian, tank.Flags)
+	}
+	binary.Write(buf, binary.BigEndian, p.Entities.ProjectileCount)
+	for _, projectile := range p.Entities.Projectiles {
+		binary.Write(buf, binary.BigEndian, projectile.EID)
+		binary.Write(buf, binary.BigEndian, projectile.Position.X)
+		binary.Write(buf, binary.BigEndian, projectile.Position.Y)
+		binary.Write(buf, binary.BigEndian, projectile.Velocity.X)
+		binary.Write(buf, binary.BigEndian, projectile.Velocity.Y)
+		binary.Write(buf, binary.BigEndian, projectile.EFlags)
+		binary.Write(buf, binary.BigEndian, projectile.BaseVelocity.X)
+		binary.Write(buf, binary.BigEndian, projectile.BaseVelocity.Y)
+		binary.Write(buf, binary.BigEndian, projectile.Bounces)
+		binary.Write(buf, binary.BigEndian, projectile.OwnerEID)
+	}
+	binary.Write(buf, binary.BigEndian, p.Entities.MineCount)
+	for _, mine := range p.Entities.Mines {
+		binary.Write(buf, binary.BigEndian, mine.EID)
+		binary.Write(buf, binary.BigEndian, mine.Position.X)
+		binary.Write(buf, binary.BigEndian, mine.Position.Y)
+		binary.Write(buf, binary.BigEndian, mine.Velocity.X)
+		binary.Write(buf, binary.BigEndian, mine.Velocity.Y)
+		binary.Write(buf, binary.BigEndian, mine.EFlags)
+		binary.Write(buf, binary.BigEndian, mine.ArmTime)
+		binary.Write(buf, binary.BigEndian, mine.OwnerEID)
+	}
+	return buf.Bytes()
+}
+
+func (p *EntityListPacket) Deserialize(data []byte) (interface{}, error) {
+	return nil, nil
 }

@@ -32,6 +32,8 @@ registerNewPacketListener(3, (data) => {
 const setMap = (map) => {
   Map.lines = map.lines;
   Map.spawnpoints = map.spawnpoints;
+
+  
 }
 
 const Vector = (x, y) => {

@@ -49,6 +49,7 @@ func DeserializePacket(data []byte) *Packet {
 	return packet
 }
 
+// map of UUID -> Client
 var clients = make(map[string]*Client)
 
 func BroadcastPacket(packetType uint8, data []byte) {

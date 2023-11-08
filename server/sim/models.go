@@ -9,7 +9,7 @@ type Line struct {
 	End   Vector
 }
 
-type UserCommand struct {
+type NetUserCommand struct {
 	EID       uint16 // Entity ID
 	Commands  uint8  // bitfield for Forward, Back, Left, Right, Fire, AltFire
 	BarrelYaw uint16 // Tenths of degree e.g. 37.1 -> 371
@@ -24,51 +24,51 @@ const (
 	AltFireBit
 )
 
-func (uc *UserCommand) SetForward() {
+func (uc *NetUserCommand) SetForward() {
 	uc.Commands |= ForwardBit
 }
 
-func (uc *UserCommand) SetBack() {
+func (uc *NetUserCommand) SetBack() {
 	uc.Commands |= BackBit
 }
 
-func (uc *UserCommand) SetLeft() {
+func (uc *NetUserCommand) SetLeft() {
 	uc.Commands |= LeftBit
 }
 
-func (uc *UserCommand) SetRight() {
+func (uc *NetUserCommand) SetRight() {
 	uc.Commands |= RightBit
 }
 
-func (uc *UserCommand) SetFire() {
+func (uc *NetUserCommand) SetFire() {
 	uc.Commands |= FireBit
 }
 
-func (uc *UserCommand) SetAltFire() {
+func (uc *NetUserCommand) SetAltFire() {
 	uc.Commands |= AltFireBit
 }
 
-func (uc *UserCommand) IsForward() bool {
+func (uc *NetUserCommand) IsForward() bool {
 	return uc.Commands&ForwardBit != 0
 }
 
-func (uc *UserCommand) IsBack() bool {
+func (uc *NetUserCommand) IsBack() bool {
 	return uc.Commands&BackBit != 0
 }
 
-func (uc *UserCommand) IsLeft() bool {
+func (uc *NetUserCommand) IsLeft() bool {
 	return uc.Commands&LeftBit != 0
 }
 
-func (uc *UserCommand) IsRight() bool {
+func (uc *NetUserCommand) IsRight() bool {
 	return uc.Commands&RightBit != 0
 }
 
-func (uc *UserCommand) IsFire() bool {
+func (uc *NetUserCommand) IsFire() bool {
 	return uc.Commands&FireBit != 0
 }
 
-func (uc *UserCommand) IsAltFire() bool {
+func (uc *NetUserCommand) IsAltFire() bool {
 	return uc.Commands&AltFireBit != 0
 }
 
@@ -77,11 +77,11 @@ const (
 	FlagInvincible
 )
 
-type Entity struct {
+type NetEntity struct {
 	EID      uint16
 	Position Vector
 	Velocity Vector
-	Flags    uint8
+	EFlags   uint8
 }
 
 const (
@@ -106,32 +106,32 @@ const (
 	TeamEight
 )
 
-type Tank struct {
-	Entity
+type NetTank struct {
+	NetEntity
 	BarrelYaw uint16 // Tenths of degree e.g. 37.1 -> 371
 	Flags     uint8  // Team and Type
 }
 
-type Bullet struct {
-	Entity
+type NetBullet struct {
+	NetEntity
 	BaseVelocity Vector
 	Bounces      uint8
 	OwnerEID     uint16
 }
 
-type Mine struct {
-	Entity
+type NetMine struct {
+	NetEntity
 	ArmTime  uint16
 	OwnerEID uint16
 }
 
-type EntityList struct {
+type NetEntityList struct {
 	TankCount       uint8
-	Tanks           []Tank
+	Tanks           []NetTank
 	ProjectileCount uint8
-	Projectiles     []Bullet
+	Projectiles     []NetBullet
 	MineCount       uint8
-	Mines           []Mine
+	Mines           []NetMine
 }
 
 type SpawnPoint struct {
@@ -146,6 +146,8 @@ type Map struct {
 }
 
 type Game struct {
-	Entities EntityList
+	Dimensions Vector // Width and height of the game world
+
+	Entities NetEntityList
 	Map      Map
 }

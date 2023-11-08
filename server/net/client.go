@@ -17,6 +17,16 @@ func NewClient(conn *websocket.Conn) *Client {
 	}
 }
 
+func GetClientByConn(conn *websocket.Conn) *Client {
+	for _, client := range clients {
+		if client.Conn == conn {
+			return client
+		}
+	}
+
+	return nil
+}
+
 func (c *Client) SendPacket(packetType uint8, data []byte) error {
 	payload := append([]byte{packetType}, data...)
 	return c.Conn.WriteMessage(websocket.BinaryMessage, payload)
